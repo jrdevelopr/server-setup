@@ -1,6 +1,6 @@
 # RUNBOOK.md — Self-hosting infrastructure runbook
 
-A complete, transferable guide to the "app lab" infrastructure: one Linux host that runs
+A complete, transferable guide to the "app platform" infrastructure: one Linux host that runs
 **both Docker and native apps**, fronts them with **one reverse proxy** and **one Cloudflare
 Tunnel**, puts a **single branded login** in front of everything, auto-registers each app on a
 **dashboard**, and is driven by **two folder-aware scripts** so deploying a new app is one
@@ -27,12 +27,12 @@ deliberately app-agnostic — it documents the platform, not the specific apps t
 > |---|---|---|
 > | `YOUR_DOMAIN` | `example.site` | A domain whose DNS is on Cloudflare |
 > | `YOUR_IP` | `<server-lan-ip>` | The server's LAN/VPN IP (reachable by you directly) |
-> | `YOUR_USER` | `examplelab` | The non-root login user that owns everything |
-> | `LAB_NAME` | `examplelab` | Short name for this lab. Used for the secrets dir `/etc/LAB_NAME/`. Can match `YOUR_USER` or differ — name it whatever you like (`devlab`, `homelab`, …) |
-> | `TUNNEL` | `examplelab-tunnel` | The Cloudflare tunnel name |
+> | `YOUR_USER` | `myserver` | The non-root login user that owns everything |
+> | `SETUP_NAME` | `myserver` | Short name for this server. Used for the secrets dir `/etc/SETUP_NAME/`. Can match `YOUR_USER` or differ — name it whatever you like (`prod`, `staging`, `home`, …) |
+> | `TUNNEL` | `myserver-tunnel` | The Cloudflare tunnel name |
 > | `GH_OWNER` | `example-org` | GitHub account/org that holds the repos |
 > | `GH_URL` | `https://github.com/example-org` | URL of the GitHub account/org (= `https://github.com/GH_OWNER`) |
-> | `GITHUB_REPO` | `examplelab` | The infrastructure repo (this `~/server-setup` dir) under `GH_OWNER`; cloned onto each new server. App repos are separate: `GH_OWNER/<app>` |
+> | `GITHUB_REPO` | `myserver` | The infrastructure repo (this `~/server-setup` dir) under `GH_OWNER`; cloned onto each new server. App repos are separate: `GH_OWNER/<app>` |
 >
 > Everything below is generic — find-and-replace these placeholders with your real values.
 
@@ -43,18 +43,18 @@ deliberately app-agnostic — it documents the platform, not the specific apps t
 Read this first. Collecting these up front turns the setup into one smooth pass instead of
 stopping mid-install to hunt for a value or an account.
 
-**1. Decide your values** (they go straight into `lab.conf`):
+**1. Decide your values** (they go straight into `setup.conf`):
 
 | Value | How to get / decide it |
 |---|---|
 | `DOMAIN` | A domain already added to Cloudflare, nameservers pointed there (zone **active**). |
 | `LAN_IP` | The server's LAN/VPN address — `ip -4 addr show` on the box. |
-| `LAB_USER` | The non-root sudo user that will own `~/server-setup` + `~/apps` (often the user you SSH in as). |
-| `LAB_NAME` | Free choice — becomes the secrets dir `/etc/LAB_NAME/` (e.g. `devlab`). |
+| `SETUP_USER` | The non-root sudo user that will own `~/server-setup` + `~/apps` (often the user you SSH in as). |
+| `SETUP_NAME` | Free choice — becomes the secrets dir `/etc/SETUP_NAME/` (e.g. `prod`). |
 | `TUNNEL` | Free choice — the Cloudflare tunnel's name. |
 | `GITHUB_OWNER` | Your GitHub account or org. |
 | `TIMEZONE` | tz database name (e.g. `America/New_York`) — `bootstrap.sh` sets it; no mid-run prompt. |
-| `GIT_USER_NAME` / `GIT_USER_EMAIL` | Commit identity for the repos this lab creates — set explicitly so you don't inherit a stray pre-existing global identity. |
+| `GIT_USER_NAME` / `GIT_USER_EMAIL` | Commit identity for the repos this server creates — set explicitly so you don't inherit a stray pre-existing global identity. |
 
 **2. Accounts you'll authenticate interactively** (browser/device — these can't be scripted, so
 have them ready and expect a prompt):
@@ -79,16 +79,16 @@ data, but know what's coming):
 
 **4. The happy path** (each step links to its section — this is the order):
 1. Install prereqs: [Docker §4](#4-docker), [Caddy §5a](#5-caddy-the-reverse-proxy), `cloudflared`, `gh`, `jq`.
-2. `git clone GH_URL/GITHUB_REPO ~/server-setup && cd ~/server-setup && ./configure.sh` — interactively asks the values + writes `lab.conf` (or `cp lab.conf.example lab.conf` and edit by hand).
-3. `gh auth login`; `cloudflared tunnel login`; `cloudflared tunnel create "$(. lab.conf; echo $TUNNEL)"` → paste the printed credentials path into `cloudflared/config.yml`.
-4. `./bootstrap.sh` — wires git hygiene, `/etc/LAB_NAME/`, the Caddy symlink, and the systemd units ([§16](#16-transferring-to-a-new-server)).
-5. **Stand up the front door:** deploy a **dashboard** (a startpage app on `DASHBOARD_PORT`, empty `subdomain` so it's the root) and the **login gateway** (a forward-auth app on `GATE_PORT` with `auth: false`); put their secrets in `/etc/LAB_NAME/`. See [§9](#9-the-login-gateway)–[§10](#10-the-dashboard).
+2. `git clone GH_URL/GITHUB_REPO ~/server-setup && cd ~/server-setup && ./configure.sh` — interactively asks the values + writes `setup.conf` (or `cp setup.conf.example setup.conf` and edit by hand).
+3. `gh auth login`; `cloudflared tunnel login`; `cloudflared tunnel create "$(. setup.conf; echo $TUNNEL)"` → paste the printed credentials path into `cloudflared/config.yml`.
+4. `./bootstrap.sh` — wires git hygiene, `/etc/SETUP_NAME/`, the Caddy symlink, and the systemd units ([§16](#16-transferring-to-a-new-server)).
+5. **Stand up the front door:** deploy a **dashboard** (a startpage app on `DASHBOARD_PORT`, empty `subdomain` so it's the root) and the **login gateway** (a forward-auth app on `GATE_PORT` with `auth: false`); put their secrets in `/etc/SETUP_NAME/`. See [§9](#9-the-login-gateway)–[§10](#10-the-dashboard).
 6. `sudo systemctl reload caddy && sudo systemctl enable --now cloudflared-<TUNNEL> flame-status.timer`.
 7. Add apps: `bin/new-app.sh <name> docker && bin/deploy.sh <name>`.
 8. **SSH-by-name** (recommended on every server): `cloudflared tunnel route dns TUNNEL ssh.YOUR_DOMAIN`, then add a `cloudflared access ssh` ProxyCommand on your client — [§6e](#6e-ssh-over-the-tunnel-do-this-on-every-server). Now `ssh ssh.YOUR_DOMAIN` works without an IP.
 
 > **For an agent running this:** everything you need from a human is in items 1–2 above. Collect
-> the six `lab.conf` values and confirm the two interactive logins can happen, *then* proceed —
+> the six `setup.conf` values and confirm the two interactive logins can happen, *then* proceed —
 > nothing else stops to ask.
 
 ---
@@ -104,7 +104,7 @@ data, but know what's coming):
 4. [Docker (containerized apps)](#4-docker)
 5. [Caddy (the reverse proxy)](#5-caddy-the-reverse-proxy)
 6. [Cloudflare Tunnel (public ingress)](#6-cloudflare-tunnel)
-7. [Repo layout & the `lab` repo](#7-repo-layout)
+7. [Repo layout & the `server-setup` repo](#7-repo-layout)
 8. [Secret hygiene (gitignore + pre-push guard)](#8-secret-hygiene)
 9. [The login gateway (forward-auth SSO)](#9-the-login-gateway)
 10. [The dashboard + status dots](#10-the-dashboard)
@@ -231,13 +231,13 @@ sudo apt-get update && sudo apt-get -y upgrade
 sudo apt-get install -y curl wget ca-certificates gnupg jq git
 ```
 
-**Timezone and git commit identity are set from `lab.conf`** (`TIMEZONE`, `GIT_USER_NAME`,
+**Timezone and git commit identity are set from `setup.conf`** (`TIMEZONE`, `GIT_USER_NAME`,
 `GIT_USER_EMAIL`) by `bootstrap.sh` — decide them in the pre-flight, not mid-run. If you're doing
 it by hand instead:
 
 ```bash
 sudo timedatectl set-timezone "America/New_York"   # your TIMEZONE
-git config --global user.name  "Lab Operator"      # your GIT_USER_NAME
+git config --global user.name  "Server Operator"      # your GIT_USER_NAME
 git config --global user.email "you@example.com"   # your GIT_USER_EMAIL — set it EXPLICITLY,
                                                    # don't inherit a stray pre-existing identity
 ```
@@ -291,7 +291,7 @@ config is versioned, and let the `caddy` service user read your home dir:
 ```bash
 sudo usermod -aG YOUR_USER caddy            # let caddy traverse /home/YOUR_USER (mode 750)
 sudo rm -f /etc/caddy/Caddyfile
-sudo ln -s /home/YOUR_USER/lab/caddy/Caddyfile /etc/caddy/Caddyfile
+sudo ln -s /home/YOUR_USER/server-setup/caddy/Caddyfile /etc/caddy/Caddyfile
 ```
 
 ### 5c. The Caddyfile
@@ -325,7 +325,7 @@ sudo ln -s /home/YOUR_USER/lab/caddy/Caddyfile /etc/caddy/Caddyfile
 }
 
 # Per-app route snippets are dropped here by deploy.sh.
-import /home/YOUR_USER/lab/caddy/apps.d/*.caddy
+import /home/YOUR_USER/server-setup/caddy/apps.d/*.caddy
 ```
 
 A per-app snippet (`apps.d/<name>.caddy`) looks like:
@@ -405,7 +405,7 @@ Wants=network-online.target
 [Service]
 Type=simple
 User=YOUR_USER
-ExecStart=/usr/local/bin/cloudflared --no-autoupdate --config /home/YOUR_USER/lab/cloudflared/config.yml tunnel run TUNNEL
+ExecStart=/usr/local/bin/cloudflared --no-autoupdate --config /home/YOUR_USER/server-setup/cloudflared/config.yml tunnel run TUNNEL
 Restart=on-failure
 RestartSec=5s
 [Install]
@@ -486,11 +486,11 @@ the network path). Phone: Termux (`pkg install openssh cloudflared` + same confi
 
 ```
 ~/server-setup/                         # the infrastructure repo (push to GH_OWNER/GITHUB_REPO)
-  lab.conf                     # ← THE one file you fill in (copy of lab.conf.example; gitignored)
-  lab.conf.example             # template of the above (the only file you must edit)
-  bootstrap.sh                 # one-shot host wiring from lab.conf
+  setup.conf                     # ← THE one file you fill in (copy of setup.conf.example; gitignored)
+  setup.conf.example             # template of the above (the only file you must edit)
+  bootstrap.sh                 # one-shot host wiring from setup.conf
   bin/
-    lib.sh                     # shared helpers; sources lab.conf, derives all paths
+    lib.sh                     # shared helpers; sources setup.conf, derives all paths
     new-app.sh                 # scaffold app + GitHub repo + board
     deploy.sh                  # deploy + route + dns + dashboard tile
     board.sh                   # GitHub Projects v2 card mover
@@ -513,15 +513,15 @@ the network path). Phone: Termux (`pkg install openssh cloudflared` + same confi
     AGENTS.md                  # agent/contributor notes (canonical — Codex et al. read it)
     CLAUDE.md                  # one-line stub: `See @AGENTS.md` (Claude Code import)
 
-/etc/LAB_NAME/                    # secrets, root-owned, chmod 600 (NEVER in git)
+/etc/SETUP_NAME/                    # secrets, root-owned, chmod 600 (NEVER in git)
   <app>.env                    # per-app credentials/keys
 ```
 
 Create and version it:
 
 ```bash
-mkdir -p ~/server-setup/{bin,caddy/apps.d,cloudflared,git/hooks} ~/apps /etc/LAB_NAME
-sudo chmod 700 /etc/LAB_NAME
+mkdir -p ~/server-setup/{bin,caddy/apps.d,cloudflared,git/hooks} ~/apps /etc/SETUP_NAME
+sudo chmod 700 /etc/SETUP_NAME
 cd ~/server-setup && git init -b main
 # ... add files ...
 gh repo create GH_OWNER/GITHUB_REPO --private --source=. --remote=origin --push
@@ -537,7 +537,7 @@ Two layers, both global (apply to **every** repo on the host):
 `*credentials*.json`, token files, plus `node_modules/`, build dirs, OS cruft. Wire it up:
 
 ```bash
-git config --global core.excludesfile /home/YOUR_USER/lab/git/gitignore.global
+git config --global core.excludesfile /home/YOUR_USER/server-setup/git/gitignore.global
 ```
 
 **8b. Global pre-push hook** (`~/server-setup/git/hooks/pre-push`): on every push, diffs the outgoing
@@ -547,11 +547,11 @@ Slack `xox…`, OpenAI `sk-…`, Google `AIza…`, `BEGIN … PRIVATE KEY`) or f
 
 ```bash
 chmod +x ~/server-setup/git/hooks/pre-push
-git config --global core.hooksPath /home/YOUR_USER/lab/git/hooks
+git config --global core.hooksPath /home/YOUR_USER/server-setup/git/hooks
 ```
 
 **The discipline:** *no secret ever lives under `~/apps/`.* All credentials go in
-`/etc/LAB_NAME/<app>.env` (root, `chmod 600`) and are referenced by compose `env_file:` or by the
+`/etc/SETUP_NAME/<app>.env` (root, `chmod 600`) and are referenced by compose `env_file:` or by the
 app's systemd unit. The git layers are a safety net, not the primary control.
 
 ---
@@ -581,7 +581,7 @@ tile.
   spoofable).
 - Open-redirect guard: the post-login `rd` target is only honored if its host is
   `YOUR_DOMAIN` or a subdomain.
-- Credentials live in `/etc/LAB_NAME/gate.env`: `GATE_USER`, `GATE_SECRET_KEY` (cookie signing),
+- Credentials live in `/etc/SETUP_NAME/gate.env`: `GATE_USER`, `GATE_SECRET_KEY` (cookie signing),
   and **`GATE_PASSWORD_HASH_B64`** — the bcrypt hash **base64-encoded** (see the §15 compose
   gotcha; base64 dodges `$`-interpolation that would corrupt the hash).
 
@@ -623,15 +623,15 @@ The status timer:
 Four bash scripts under `~/server-setup/bin/` turn "a folder" into "a deployed, routed, logged-in,
 dashboarded app." All are idempotent.
 
-### `lab.conf` — the single source of deployment-specific values
-All host-specific values (`DOMAIN`, `LAN_IP`, `LAB_USER`, `LAB_NAME`, `TUNNEL`,
-`GITHUB_OWNER`, port range, infra ports) live in **one file**, `lab.conf` (copied from
-`lab.conf.example`, gitignored). Nothing is hardcoded in the scripts. `bin/lib.sh` sources it
-and derives every path from the repo's own location, so the lab works regardless of username or
+### `setup.conf` — the single source of deployment-specific values
+All host-specific values (`DOMAIN`, `LAN_IP`, `SETUP_USER`, `SETUP_NAME`, `TUNNEL`,
+`GITHUB_OWNER`, port range, infra ports) live in **one file**, `setup.conf` (copied from
+`setup.conf.example`, gitignored). Nothing is hardcoded in the scripts. `bin/lib.sh` sources it
+and derives every path from the repo's own location, so the setup works regardless of username or
 where it's cloned.
 
 ### `lib.sh` — shared helpers (sourced by the rest)
-- Sources `lab.conf`; derives `LAB_DIR`/`APPS_DIR`/`SECRETS_DIR` from the repo location.
+- Sources `setup.conf`; derives `SETUP_DIR`/`APPS_DIR`/`SECRETS_DIR` from the repo location.
 - `yget <file> <key>` — read a flat `key: value` from `deploy.yaml` (tolerant of missing keys).
 - `pick_port` — lowest free host port in the app range, skipping ones already claimed or bound.
 - `flame_token` / `flame_register` — dashboard API (see §10).
@@ -699,7 +699,7 @@ competing unit). You still wire their Caddy route, DNS, and tile by hand. Mark t
 
 ### Agent instructions: `AGENTS.md` (canonical) + a `CLAUDE.md` stub
 
-Every repo (each app **and** the lab/infra repo) carries agent/contributor instructions in
+Every repo (each app **and** the infra repo) carries agent/contributor instructions in
 **`AGENTS.md`** — the cross-tool standard that Codex and most agent tools read by default — and a
 one-line **`CLAUDE.md`** stub that imports it:
 
@@ -740,14 +740,14 @@ each `deploy.yaml`; `pick_port` auto-assigns the lowest free one. Third-party ap
 a port (dashboards, control planes) are documented **exceptions** — don't remap or "collision"-flag
 them.
 
-**Credentials — one identity everywhere it's supported** (all from `lab.conf`):
+**Credentials — one identity everywhere it's supported** (all from `setup.conf`):
 - **`ADMIN_USER`** (default `admin`) — the login username; use **`ADMIN_EMAIL`** where an app
   requires an email.
-- **`LAB_PASSWORD`** — the single shared production password. The operator sets it in `lab.conf`
+- **`SETUP_PASSWORD`** — the single shared production password. The operator sets it in `setup.conf`
   (via `configure.sh`, hidden prompt) **before** deploying. Apply it to the gate **and** every
   app's own login/seed, so there's literally one password. Bcrypt-hash it into
-  `/etc/LAB_NAME/*.env` (base64 the hash — gotcha #3); never store it plaintext in a tracked file.
-- `lab.conf` holds `LAB_PASSWORD`, so it's a **secret file** — gitignored + `chmod 600`, never committed.
+  `/etc/SETUP_NAME/*.env` (base64 the hash — gotcha #3); never store it plaintext in a tracked file.
+- `setup.conf` holds `SETUP_PASSWORD`, so it's a **secret file** — gitignored + `chmod 600`, never committed.
 - Passwordless apps (email-code or no-auth) can't use the password — they just stay behind the gate.
 
 **Timezone.** Host set with `timedatectl`. Containers inherit it by adding
@@ -808,7 +808,7 @@ These each cost real debugging time. They're the reason this doc exists.
 
 10. **A whole-host PaaS can't co-exist with this design.** (E.g. Dokploy's installer demands
     ports 80/443/3000, runs `docker swarm init`, and installs Traefik as *the* host proxy — it
-    collides head-on with Caddy + the tunnel and would take the lab offline. Evaluate such tools
+    collides head-on with Caddy + the tunnel and would take the setup offline. Evaluate such tools
     on a dedicated VM, not this host.)
 
 11. **A pre-existing Cloudflare Redirect Rule / Page Rule will hijack ALL traffic before it
@@ -852,24 +852,24 @@ The repo is portable; only host-specific values change. On the new box:
 1. **Provision** (§3): user, packages, timezone.
 2. **Install** Docker (§4), Caddy (§5a), cloudflared, gh.
 3. **Clone the infra repo:** `git clone GH_URL/GITHUB_REPO ~/server-setup && cd ~/server-setup`.
-4. **Fill in `lab.conf`** — the only file you edit. All host-specific values live here; the
+4. **Fill in `setup.conf`** — the only file you edit. All host-specific values live here; the
    scripts read it and derive every path, so there's no scattered find-and-replace anymore:
    ```bash
-   ./configure.sh                       # recommended: prompts for the values, writes lab.conf
-   # or by hand: cp lab.conf.example lab.conf && nano lab.conf
-   #   DOMAIN, LAN_IP, LAB_USER, LAB_NAME, TUNNEL, GITHUB_OWNER, TIMEZONE, git identity, ports
+   ./configure.sh                       # recommended: prompts for the values, writes setup.conf
+   # or by hand: cp setup.conf.example setup.conf && nano setup.conf
+   #   DOMAIN, LAN_IP, SETUP_USER, SETUP_NAME, TUNNEL, GITHUB_OWNER, TIMEZONE, git identity, ports
    ```
-   (Two files still hold a couple of values `lab.conf` can't reach — `caddy/Caddyfile`'s
+   (Two files still hold a couple of values `setup.conf` can't reach — `caddy/Caddyfile`'s
    `import` path and `cloudflared/config.yml`'s tunnel/UUID/hostnames. `bootstrap.sh` in step 6
-   personalizes those for you from `lab.conf`; you only hand-paste the tunnel `<UUID>` path.)
+   personalizes those for you from `setup.conf`; you only hand-paste the tunnel `<UUID>` path.)
 5. **Re-establish the externals (per-host, never copied):**
    - `cloudflared tunnel login` + `cloudflared tunnel create TUNNEL` (new cert + new UUID;
      update `config.yml`).
    - `gh auth login` (scopes: repo, workflow, project, delete_repo).
-   - **Regenerate all secrets** in `/etc/LAB_NAME/` — do **not** copy old ones. New gate
+   - **Regenerate all secrets** in `/etc/SETUP_NAME/` — do **not** copy old ones. New gate
      `GATE_SECRET_KEY` + password hash, new app credentials, etc.
-6. **Run `./bootstrap.sh`** — wires the host from `lab.conf` in one shot (idempotent):
-   global gitignore + hooks path, creates `/etc/LAB_NAME/`, personalizes the `caddy/Caddyfile`
+6. **Run `./bootstrap.sh`** — wires the host from `setup.conf` in one shot (idempotent):
+   global gitignore + hooks path, creates `/etc/SETUP_NAME/`, personalizes the `caddy/Caddyfile`
    import path + `cloudflared/config.yml` hostnames, symlinks `/etc/caddy/Caddyfile`, and
    installs the `cloudflared-<TUNNEL>` + `flame-status` systemd units. (Then paste the tunnel
    `<UUID>` path into `cloudflared/config.yml` and `enable --now cloudflared-<TUNNEL>`.)
@@ -878,7 +878,7 @@ The repo is portable; only host-specific values change. On the new box:
 8. **DNS:** `cloudflared tunnel route dns TUNNEL <host>` per app (or the one-time wildcard CNAME).
 
 What is **not** transferable and must be recreated fresh: the Cloudflare cert/tunnel
-credentials, the GitHub auth token, and **every secret in `/etc/LAB_NAME/`**.
+credentials, the GitHub auth token, and **every secret in `/etc/SETUP_NAME/`**.
 
 ---
 
@@ -888,7 +888,7 @@ credentials, the GitHub auth token, and **every secret in `/etc/LAB_NAME/`**.
   the internet, and all of them sit behind the login gate. `public: false` apps are LAN/VPN-only.
 - **The gate is the perimeter.** One password protects everything public. That's convenient, but
   it means the blast radius of that password = every app. Use a strong one; rotate by updating
-  `/etc/LAB_NAME/gate.env` + recreating the gate container.
+  `/etc/SETUP_NAME/gate.env` + recreating the gate container.
 - **Some apps grant host-level power** (an IDE with a terminal, a Docker-socket dashboard, an
   agent runner with shell access). Behind one shared password, anyone past the login effectively
   controls the host — which could reach the rest of your network. Keep the highest-risk ones
@@ -897,7 +897,7 @@ credentials, the GitHub auth token, and **every secret in `/etc/LAB_NAME/`**.
   gate. That's the trusted operator/automation path — it assumes the LAN/VPN itself is trusted.
   If it isn't, don't rely on the local-port escape hatch.
 - **Secrets never enter git** (gitignore + pre-push guard). They live root-owned in
-  `/etc/LAB_NAME/`. Tunnel/GitHub credentials live in the user's home, also gitignored.
+  `/etc/SETUP_NAME/`. Tunnel/GitHub credentials live in the user's home, also gitignored.
 - **Hardening to consider for production** (this build is a sandbox): an egress firewall
   limiting what the server can reach on your other subnets; Cloudflare Access (real edge SSO /
   device posture) instead of the simple gate; per-app credentials instead of one shared password;
@@ -919,7 +919,7 @@ credentials, the GitHub auth token, and **every secret in `/etc/LAB_NAME/`**.
 | `bin/flame-status.sh` | Dashboard status-dot updater (systemd timer) |
 | `git/gitignore.global` | Global secret excludes (`core.excludesfile`) |
 | `git/hooks/pre-push` | Secret-scanning push guard (`core.hooksPath`) |
-| `/etc/LAB_NAME/<app>.env` | Per-app secrets (root 600, **never** in git) |
+| `/etc/SETUP_NAME/<app>.env` | Per-app secrets (root 600, **never** in git) |
 | `~/apps/<name>/deploy.yaml` | Per-app deploy descriptor |
 
 *This runbook documents the platform only. The specific apps deployed on top of it are

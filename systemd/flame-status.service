@@ -1,9 +1,9 @@
 # Install as: /etc/systemd/system/flame-status.service
-# Replace YOUR_USER with your LAB_USER (or the repo path). Paired with flame-status.timer.
+# Replace YOUR_USER with your SETUP_USER (or the repo path). Paired with flame-status.timer.
 [Unit]
 Description=Update dashboard tile status dots
 After=docker.service caddy.service
 
 [Service]
 Type=oneshot
-ExecStart=/home/YOUR_USER/lab/bin/flame-status.sh
+ExecStart=/home/YOUR_USER/server-setup/bin/flame-status.sh

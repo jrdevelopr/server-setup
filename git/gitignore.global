@@ -1,4 +1,4 @@
-# ── Global gitignore for the lab (applied to every repo) ──
+# ── Global gitignore for the setup (applied to every repo) ──
 # Applied to every repo via: git config --global core.excludesfile
 # Secret hygiene: keep credentials out of every scaffolded/auto-pushed repo.
 

@@ -1,21 +1,21 @@
 #!/usr/bin/env bash
-# Shared helpers for the lab automation scripts.
-# All deployment-specific values come from ../lab.conf (copy lab.conf.example first).
+# Shared helpers for the automation scripts.
+# All deployment-specific values come from ../setup.conf (copy setup.conf.example first).
 
 # Repo root = parent of bin/ (works no matter where the repo is cloned / which user).
-LAB_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
-CONF="$LAB_DIR/lab.conf"
+SETUP_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
+CONF="$SETUP_DIR/setup.conf"
 if [ ! -f "$CONF" ]; then
-	echo "✗ Missing $CONF — copy lab.conf.example to lab.conf and fill it in." >&2
+	echo "✗ Missing $CONF — copy setup.conf.example to setup.conf and fill it in." >&2
 	exit 1
 fi
 # shellcheck disable=SC1090
 source "$CONF"
 
-# Derived paths (apps dir is a sibling of the lab repo; override in lab.conf if you like).
-APPS_DIR="${APPS_DIR:-$(dirname "$LAB_DIR")/apps}"
-SECRETS_DIR="/etc/${LAB_NAME}"
-CADDY_APPS_D="$LAB_DIR/caddy/apps.d"
+# Derived paths (apps dir is a sibling of the setup repo; override in setup.conf if you like).
+APPS_DIR="${APPS_DIR:-$(dirname "$SETUP_DIR")/apps}"
+SECRETS_DIR="/etc/${SETUP_NAME}"
+CADDY_APPS_D="$SETUP_DIR/caddy/apps.d"
 
 # Colors
 G='\033[0;32m'; B='\033[0;34m'; Y='\033[0;33m'; R='\033[0;31m'; NC='\033[0m'

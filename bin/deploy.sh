@@ -62,13 +62,13 @@ elif [ "$TYPE" = "native" ]; then
 	EXPANDED_START="${START//\$PORT/$PORT}"
 	sudo tee "/etc/systemd/system/$UNIT.service" >/dev/null <<UNITEOF
 [Unit]
-Description=Lab native app: $NAME
+Description=App: $NAME
 After=network-online.target
 Wants=network-online.target
 
 [Service]
 Type=simple
-User=$LAB_USER
+User=$SETUP_USER
 WorkingDirectory=$APP_DIR
 Environment=PORT=$PORT
 ExecStart=/bin/bash -lc '$EXPANDED_START'
@@ -107,9 +107,9 @@ if [ "$ROUTABLE" = 1 ]; then
 	say "Writing Caddy route $SUB.$DOMAIN -> localhost:$PORT"
 	# NOTE: the http:// scheme is required — a bare hostname defaults to :443 even
 	# with auto_https off, but the tunnel forwards to :80. http:// pins it to :80.
-	# `import gate` puts this route behind the lab-gate login (forward-auth). Internet
+	# `import gate` puts this route behind the gate login (forward-auth). Internet
 	# traffic must log in; direct host-port LAN access is not gated. Set `auth: false`
-	# in deploy.yaml to leave a route open (e.g. lab-gate itself, to avoid a redirect loop).
+	# in deploy.yaml to leave a route open (e.g. gate itself, to avoid a redirect loop).
 	if [ "$AUTH" = "false" ]; then GATE_LINE=""; else GATE_LINE=$'\timport gate'; fi
 	cat > "$CADDY_APPS_D/$NAME.caddy" <<CADDYEOF
 http://$SUB.$DOMAIN {
@@ -118,7 +118,7 @@ $GATE_LINE
 }
 CADDYEOF
 	if sudo systemctl reload caddy; then ok "Caddy reloaded"; else
-		die "Caddy reload failed — check: caddy validate --config $LAB_DIR/caddy/Caddyfile"
+		die "Caddy reload failed — check: caddy validate --config $SETUP_DIR/caddy/Caddyfile"
 	fi
 
 	say "Ensuring tunnel DNS route for $SUB.$DOMAIN"

@@ -70,7 +70,7 @@ YAML
 
 	cat > "$APP_DIR/index.html" <<HTML
 <!doctype html><title>$NAME</title>
-<h1>$NAME</h1><p>native lab app — replace start_command + source with your real app.</p>
+<h1>$NAME</h1><p>app — replace start_command + source with your real app.</p>
 HTML
 fi
 
@@ -81,7 +81,7 @@ fi
 cat > "$APP_DIR/AGENTS.md" <<MD
 # $NAME
 
-Lab app scaffolded by \`new-app.sh\`.
+App scaffolded by \`new-app.sh\`.
 
 - **Type:** $TYPE
 - **Local link:** http://$LAN_IP:$PORT  (bound 0.0.0.0 — reachable over VPN)

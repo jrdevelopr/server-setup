@@ -1,7 +1,7 @@
 # Install as: /etc/systemd/system/cloudflared-TUNNEL.service
-# Replace TUNNEL with your tunnel name and YOUR_USER with your LAB_USER, then:
+# Replace TUNNEL with your tunnel name and YOUR_USER with your SETUP_USER, then:
 #   sudo systemctl daemon-reload && sudo systemctl enable --now cloudflared-TUNNEL
-# (bootstrap.sh does this substitution for you from lab.conf.)
+# (bootstrap.sh does this substitution for you from setup.conf.)
 [Unit]
 Description=Cloudflare Tunnel (TUNNEL)
 After=network-online.target caddy.service
@@ -10,7 +10,7 @@ Wants=network-online.target
 [Service]
 Type=simple
 User=YOUR_USER
-ExecStart=/usr/local/bin/cloudflared --no-autoupdate --config /home/YOUR_USER/lab/cloudflared/config.yml tunnel run TUNNEL
+ExecStart=/usr/local/bin/cloudflared --no-autoupdate --config /home/YOUR_USER/server-setup/cloudflared/config.yml tunnel run TUNNEL
 Restart=on-failure
 RestartSec=5s
 

@@ -1,7 +1,7 @@
 # Install as: /etc/systemd/system/flame-status.timer  then:
 #   sudo systemctl daemon-reload && sudo systemctl enable --now flame-status.timer
 [Unit]
-Description=Probe lab apps and refresh dashboard status dots every minute
+Description=Probe apps and refresh dashboard status dots every minute
 
 [Timer]
 OnBootSec=30s

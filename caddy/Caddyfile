@@ -9,7 +9,7 @@
 # (gate) — forward-auth to the login gateway. Every public route does `import gate`;
 # unauthenticated visitors get a branded login page (SSO cookie scoped to .YOUR_DOMAIN
 # covers all apps + apex). Direct host-port access on the LAN/VPN bypasses Caddy and is
-# NOT gated (the automation path). Port below must equal GATE_PORT in lab.conf.
+# NOT gated (the automation path). Port below must equal GATE_PORT in setup.conf.
 (gate) {
 	forward_auth localhost:8082 {
 		uri /verify
@@ -23,7 +23,7 @@
 }
 
 # Root / catch-all on :80 -> the dashboard. Serves the bare LAN IP and the apex domain.
-# Port below must equal DASHBOARD_PORT in lab.conf. NOTE: only ONE :80 block may exist
+# Port below must equal DASHBOARD_PORT in setup.conf. NOTE: only ONE :80 block may exist
 # (Caddy errors on duplicate site addresses) — edit this one, never add another.
 :80 {
 	import gate
@@ -36,5 +36,5 @@
 #       import gate
 #       reverse_proxy localhost:<port>
 #   }
-# IMPORTANT: replace YOUR_USER below with your LAB_USER (or wherever you cloned the repo).
-import /home/YOUR_USER/lab/caddy/apps.d/*.caddy
+# IMPORTANT: replace YOUR_USER below with your SETUP_USER (or wherever you cloned the repo).
+import /home/YOUR_USER/server-setup/caddy/apps.d/*.caddy
