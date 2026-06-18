@@ -455,7 +455,10 @@ sudo systemctl restart cloudflared-TUNNEL
 cloudflared tunnel --config ~/server-setup/cloudflared/config.yml ingress validate
 ```
 
-**On each client machine** (laptop/phone) — install `cloudflared`, then add to `~/.ssh/config`:
+**On each client machine the ProxyCommand is REQUIRED** — without it, `ssh ssh.YOUR_DOMAIN`
+connects to Cloudflare's edge IP on raw port 22, which Cloudflare does **not** forward, so it
+just **times out** (`connect to address … port 22: Connection timed out`). Install `cloudflared`
+and add to `~/.ssh/config`:
 
 ```ssh-config
 Host ssh.YOUR_DOMAIN
@@ -463,9 +466,14 @@ Host ssh.YOUR_DOMAIN
     User YOUR_USER
 ```
 
-Now `ssh ssh.YOUR_DOMAIN` just works, using your existing key/password (the tunnel only changes
-the network path). Phone: Termux (`pkg install openssh cloudflared` + same config) or Termius
-(built-in Cloudflare support).
+- **Linux/macOS:** `brew install cloudflared` (or the binary).
+- **Windows (PowerShell):** `winget install --id Cloudflare.cloudflared`, then reopen the
+  terminal. If `ssh` can't find it for the ProxyCommand, use the full path with forward slashes:
+  `ProxyCommand C:/Program Files (x86)/cloudflared/cloudflared.exe access ssh --hostname %h`.
+- **Phone:** Termux (`pkg install openssh cloudflared` + same config) or Termius (built-in CF support).
+
+Then `ssh ssh.YOUR_DOMAIN` just works, using your existing key/password (the tunnel only changes
+the network path).
 
 > **Verify the path** from any box with `cloudflared`:
 > ```bash

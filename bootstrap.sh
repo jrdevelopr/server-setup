@@ -80,6 +80,16 @@ sudo systemctl enable flame-status.timer >/dev/null 2>&1 || true
 rm -rf "$TMP"
 ok "Units installed: cloudflared-$TUNNEL.service, flame-status.{service,timer}"
 
+# SSH-by-name: route ssh.<domain> -> the tunnel (the ssh:// ingress rule is already in
+# config.yml). Best-effort — needs the tunnel created + ~/.cloudflared/cert.pem.
+if [ -f "$HOME/.cloudflared/cert.pem" ] && command -v cloudflared >/dev/null 2>&1; then
+	if cloudflared tunnel route dns "$TUNNEL" "ssh.$DOMAIN" >/dev/null 2>&1; then
+		ok "SSH-by-name routed: ssh ssh.$DOMAIN (client needs the 'cloudflared access ssh' ProxyCommand — RUNBOOK §6e)"
+	else
+		warn "ssh.$DOMAIN DNS not routed yet (create the tunnel first, then: cloudflared tunnel route dns $TUNNEL ssh.$DOMAIN)"
+	fi
+fi
+
 say "7/7  Config backup — detach from the PUBLIC template, point at your private repo"
 # A server's config (routes, tunnel config, contract) must NEVER push to the public kit.
 # This working copy was cloned from the public template, so drop that origin.
