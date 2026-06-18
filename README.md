@@ -12,6 +12,23 @@ No secrets, no domains, no IPs are baked in — every deployment-specific value 
 > 📖 **Full explanation & step-by-step build:** see **[RUNBOOK.md](RUNBOOK.md)** — architecture,
 > why each piece exists, the gotchas, the security model, and the transfer checklist.
 
+## 🚀 Paste this on a fresh Ubuntu server
+
+Run this one block (as a sudo user). It pulls the whole setup kit into **`~/lab`**:
+
+```bash
+command -v git >/dev/null || { sudo apt-get update -qq && sudo apt-get install -y git; }
+git clone https://github.com/jrdevelopr/server-scripts.git ~/lab && cd ~/lab
+echo && echo "✅ Setup kit is in ~/lab."
+echo "   → Tell your agent:  \"Go to ~/lab and follow AGENTS.md to set up this server.\""
+echo "   → Or read it yourself:  less ~/lab/RUNBOOK.md   (start at the ★ Pre-flight section)"
+```
+
+Then just tell an agent: **“Go to `~/lab` and follow AGENTS.md to set up this server.”**
+The agent reads [`AGENTS.md`](AGENTS.md) → [`RUNBOOK.md`](RUNBOOK.md) and takes it from there.
+(`~/lab` is the working repo the RUNBOOK uses throughout; you fill in `lab.conf` right there.
+Forked this repo? Swap in your own clone URL above.)
+
 ## What's here
 
 ```
