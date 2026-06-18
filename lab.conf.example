@@ -34,6 +34,13 @@ TIMEZONE="America/New_York"
 GIT_USER_NAME="Lab Operator"
 GIT_USER_EMAIL="you@example.com"
 
+# ── Shared login (ONE identity across the gate splash page + every app) ──────
+ADMIN_USER="admin"               # login username (use ADMIN_EMAIL where an app requires an email)
+ADMIN_EMAIL="you@example.com"    # email identity for apps that key on email
+LAB_PASSWORD=""                  # the ONE production password, used everywhere — SET THIS before
+                                 # running. Host-local SECRET: lab.conf is gitignored; keep it
+                                 # chmod 600 and NEVER commit it.
+
 # Host-port range auto-assigned to apps (one per app).
 PORT_MIN=8080
 PORT_MAX=8099

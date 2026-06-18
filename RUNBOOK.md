@@ -740,11 +740,15 @@ each `deploy.yaml`; `pick_port` auto-assigns the lowest free one. Third-party ap
 a port (dashboards, control planes) are documented **exceptions** — don't remap or "collision"-flag
 them.
 
-**Credentials — one identity everywhere it's supported:**
-- Username `admin`, a single shared **lab password**, a single email.
-- Recorded once in `/etc/LAB_NAME/` (root, 600). Apply it to every app's own login/seed *and* the
-  gate, so there's literally one password.
-- Passwordless apps (email-code or no-auth) can't use it — they just stay behind the gate.
+**Credentials — one identity everywhere it's supported** (all from `lab.conf`):
+- **`ADMIN_USER`** (default `admin`) — the login username; use **`ADMIN_EMAIL`** where an app
+  requires an email.
+- **`LAB_PASSWORD`** — the single shared production password. The operator sets it in `lab.conf`
+  (via `configure.sh`, hidden prompt) **before** deploying. Apply it to the gate **and** every
+  app's own login/seed, so there's literally one password. Bcrypt-hash it into
+  `/etc/LAB_NAME/*.env` (base64 the hash — gotcha #3); never store it plaintext in a tracked file.
+- `lab.conf` holds `LAB_PASSWORD`, so it's a **secret file** — gitignored + `chmod 600`, never committed.
+- Passwordless apps (email-code or no-auth) can't use the password — they just stay behind the gate.
 
 **Timezone.** Host set with `timedatectl`. Containers inherit it by adding
 `TZ=America/New_York` (works when the image ships `tzdata`). **Slim images without zoneinfo**
