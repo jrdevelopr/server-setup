@@ -1,0 +1,43 @@
+# ─────────────────────────────────────────────────────────────────────────
+#  lab.conf — the ONE place you set deployment-specific values.
+#  Copy this file to `lab.conf` (same dir) and fill in your real values:
+#       cp lab.conf.example lab.conf && nano lab.conf
+#  `lab.conf` is gitignored (it identifies your deployment); this .example is not.
+#  All scripts source it via bin/lib.sh. Paths derive from the repo location,
+#  so nothing is tied to a specific home directory.
+# ─────────────────────────────────────────────────────────────────────────
+
+# Your domain — must already be added to Cloudflare with NS pointed there.
+DOMAIN="example.site"
+
+# The server's LAN/VPN IP (how YOU reach apps directly, bypassing the tunnel/gate).
+LAN_IP="<server-lan-ip>"
+
+# The OS login user that owns ~/lab and ~/apps (used for native systemd units).
+LAB_USER="examplelab"
+
+# Short name for this lab → the secrets directory /etc/LAB_NAME (root, chmod 600).
+# Name it whatever you like: devlab, homelab, ...
+LAB_NAME="examplelab"
+
+# The Cloudflare tunnel name (you create it with: cloudflared tunnel create TUNNEL).
+TUNNEL="examplelab-tunnel"
+
+# GitHub account/org that holds the app repos + Project boards.
+GITHUB_OWNER="example-org"
+
+# Host timezone (bootstrap.sh runs `timedatectl set-timezone`). Use a tz database name.
+TIMEZONE="America/New_York"
+
+# Git commit identity for this host (bootstrap.sh sets these globally). Avoids inheriting
+# a stray pre-existing identity for the repos this lab creates.
+GIT_USER_NAME="Lab Operator"
+GIT_USER_EMAIL="you@example.com"
+
+# Host-port range auto-assigned to apps (one per app).
+PORT_MIN=8080
+PORT_MAX=8099
+
+# Fixed infrastructure ports (match your Caddyfile):
+DASHBOARD_PORT=5005   # the dashboard (Flame) — also the :80 catch-all target
+GATE_PORT=8082        # the login gateway (forward-auth) — the (gate) snippet target

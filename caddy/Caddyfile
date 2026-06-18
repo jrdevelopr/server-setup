@@ -1,0 +1,40 @@
+{
+	# TLS is terminated at the Cloudflare edge and the tunnel forwards plain
+	# HTTP to this proxy, so disable Caddy's automatic HTTPS entirely.
+	# No certs, no ACME, no redirects — just Host-based routing on :80.
+	auto_https off
+	admin localhost:2019
+}
+
+# (gate) — forward-auth to the login gateway. Every public route does `import gate`;
+# unauthenticated visitors get a branded login page (SSO cookie scoped to .YOUR_DOMAIN
+# covers all apps + apex). Direct host-port access on the LAN/VPN bypasses Caddy and is
+# NOT gated (the automation path). Port below must equal GATE_PORT in lab.conf.
+(gate) {
+	forward_auth localhost:8082 {
+		uri /verify
+		# Strip hop-by-hop upgrade headers from the AUTH subrequest only. Otherwise a
+		# WebSocket upgrade reaches the auth app as a bogus upgrade and returns 400,
+		# which forward_auth reads as "denied" -> WS fails (close 1006). The original
+		# request keeps its Upgrade headers for the real backend.
+		header_up -Connection
+		header_up -Upgrade
+	}
+}
+
+# Root / catch-all on :80 -> the dashboard. Serves the bare LAN IP and the apex domain.
+# Port below must equal DASHBOARD_PORT in lab.conf. NOTE: only ONE :80 block may exist
+# (Caddy errors on duplicate site addresses) — edit this one, never add another.
+:80 {
+	import gate
+	reverse_proxy localhost:5005
+}
+
+# Each deployed app drops a <name>.caddy snippet here (written by deploy.sh).
+# A snippet looks like:
+#   http://<sub>.YOUR_DOMAIN {
+#       import gate
+#       reverse_proxy localhost:<port>
+#   }
+# IMPORTANT: replace YOUR_USER below with your LAB_USER (or wherever you cloned the repo).
+import /home/YOUR_USER/lab/caddy/apps.d/*.caddy

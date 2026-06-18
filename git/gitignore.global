@@ -1,0 +1,38 @@
+# ── Global gitignore for the lab (applied to every repo) ──
+# Applied to every repo via: git config --global core.excludesfile
+# Secret hygiene: keep credentials out of every scaffolded/auto-pushed repo.
+
+# Env / secrets
+.env
+.env.*
+*.env
+secrets.*
+*secret*
+*credentials*.json
+*.pem
+*.key
+*.p12
+*.pfx
+id_rsa
+id_ed25519
+*token*.txt
+*.token
+
+# Cloudflared tunnel creds (never commit)
+*.cloudflared.json
+
+# OS / editor cruft
+.DS_Store
+Thumbs.db
+*.swp
+*~
+
+# Dependency / build dirs
+node_modules/
+__pycache__/
+*.pyc
+.venv/
+venv/
+dist/
+build/
+.cache/

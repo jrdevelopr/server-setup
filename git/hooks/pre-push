@@ -1,0 +1,56 @@
+#!/usr/bin/env bash
+# ── Pre-push secret guard (lab global hook) ──────────────────────────────
+# Defense-in-depth on top of the global gitignore: scans the commits about to
+# be pushed for high-signal secret patterns and forbidden filenames, and
+# aborts the push if any are found.
+#
+# Installed globally via: git config --global core.hooksPath ~/lab/git/hooks
+set -euo pipefail
+
+remote="$1"
+RED='\033[0;31m'; YEL='\033[0;33m'; NC='\033[0m'
+
+# High-signal secret content patterns (avoid noisy generic matches).
+PATTERNS='(gh[pousr]_[A-Za-z0-9]{30,})|(AKIA[0-9A-Z]{16})|(-----BEGIN [A-Z ]*PRIVATE KEY-----)|(xox[baprs]-[A-Za-z0-9-]{10,})|(sk-[A-Za-z0-9]{20,})|(AIza[0-9A-Za-z_\-]{30,})'
+# Forbidden filenames (belt-and-suspenders with .gitignore).
+FORBIDDEN_FILES='(^|/)(\.env)(\..*)?$|\.pem$|credentials.*\.json$|\.p12$|\.pfx$|(^|/)id_(rsa|ed25519)$'
+
+fail=0
+
+while read -r local_ref local_sha remote_ref remote_sha; do
+	[ "$local_sha" = "0000000000000000000000000000000000000000" ] && continue
+	if [ "$remote_sha" = "0000000000000000000000000000000000000000" ]; then
+		# New branch on remote: scan all commits reachable only from local_sha.
+		range="$local_sha"
+		files=$(git diff-tree --no-commit-id --name-only -r "$local_sha" 2>/dev/null || true)
+		content=$(git show "$local_sha" 2>/dev/null || true)
+	else
+		range="${remote_sha}..${local_sha}"
+		files=$(git diff --name-only "$remote_sha" "$local_sha" 2>/dev/null || true)
+		content=$(git diff "$remote_sha" "$local_sha" 2>/dev/null || true)
+	fi
+
+	# 1) Forbidden filenames
+	if [ -n "$files" ]; then
+		while IFS= read -r f; do
+			[ -z "$f" ] && continue
+			if printf '%s\n' "$f" | grep -Eq "$FORBIDDEN_FILES"; then
+				printf "${RED}✗ BLOCKED: forbidden file staged for push: %s${NC}\n" "$f" >&2
+				fail=1
+			fi
+		done <<< "$files"
+	fi
+
+	# 2) Secret content patterns
+	if printf '%s' "$content" | grep -Eqn "$PATTERNS"; then
+		printf "${RED}✗ BLOCKED: secret-like content detected in push range %s${NC}\n" "$range" >&2
+		printf "%s" "$content" | grep -EnI "$PATTERNS" | head -5 | sed 's/^/    /' >&2
+		fail=1
+	fi
+done
+
+if [ "$fail" -ne 0 ]; then
+	printf "${YEL}Push aborted. Remove the secret(s) from history, then re-push.${NC}\n" >&2
+	exit 1
+fi
+exit 0

@@ -1,0 +1,21 @@
+# Cloudflare Tunnel ingress. Fill in TUNNEL, YOUR_USER, <UUID>, and YOUR_DOMAIN.
+# The <UUID>.json credential is written by `cloudflared tunnel create TUNNEL`
+# (lives in ~/.cloudflared/, gitignored — never commit it).
+tunnel: TUNNEL
+credentials-file: /home/YOUR_USER/.cloudflared/<UUID>.json
+
+# Everything under the zone goes to the Caddy reverse proxy on :80.
+# Caddy routes by Host header to each app's local port.
+ingress:
+  # SSH over the tunnel — reach the box by name (no IP) with `ssh ssh.YOUR_DOMAIN`.
+  # MUST come before the wildcard, or it'd be treated as HTTP. See RUNBOOK §6e for
+  # the client setup. (Harmless if you don't use it; remove the two lines to disable.)
+  - hostname: "ssh.YOUR_DOMAIN"
+    service: ssh://localhost:22
+  # The wildcard does NOT match the bare apex, so the apex needs its own entry
+  # (above the 404 catch-all). Apex -> Caddy :80 catch-all -> dashboard.
+  - hostname: "YOUR_DOMAIN"
+    service: http://localhost:80
+  - hostname: "*.YOUR_DOMAIN"
+    service: http://localhost:80
+  - service: http_status:404
