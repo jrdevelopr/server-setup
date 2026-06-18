@@ -20,7 +20,7 @@ edge.
 3. **Gather all human inputs up front** (the `lab.conf` values, the two interactive logins —
    Cloudflare + GitHub, and temporary passwordless sudo for agent-driven runs), then run
    start-to-finish without stopping to ask.
-4. `cp lab.conf.example lab.conf` → fill it in → `./bootstrap.sh` → follow the RUNBOOK's happy path.
+4. `./configure.sh` (prompts for the values → writes `lab.conf`) → `./bootstrap.sh` → follow the RUNBOOK happy path.
 
 ## Hard rules
 - **Never commit secrets.** Real values live only in the host-local, **gitignored** `lab.conf`

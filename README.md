@@ -18,21 +18,25 @@ Run this one block (as a sudo user). It pulls the whole setup kit into **`~/lab`
 
 ```bash
 command -v git >/dev/null || { sudo apt-get update -qq && sudo apt-get install -y git; }
-git clone https://github.com/jrdevelopr/server-scripts.git ~/lab && cd ~/lab
-echo && echo "✅ Setup kit is in ~/lab."
-echo "   → Tell your agent:  \"Go to ~/lab and follow AGENTS.md to set up this server.\""
-echo "   → Or read it yourself:  less ~/lab/RUNBOOK.md   (start at the ★ Pre-flight section)"
+git clone https://github.com/jrdevelopr/server-scripts.git ~/lab && cd ~/lab && ./configure.sh
 ```
+
+That clones the kit into **`~/lab`** and runs **`configure.sh`**, which **interactively asks you
+the handful of values** (domain, GitHub owner, IP, lab name, tunnel, timezone, git identity —
+with auto-detected defaults you just press Enter through) and writes them to `lab.conf`. No
+hand-editing a config file.
 
 Then just tell an agent: **“Go to `~/lab` and follow AGENTS.md to set up this server.”**
 The agent reads [`AGENTS.md`](AGENTS.md) → [`RUNBOOK.md`](RUNBOOK.md) and takes it from there.
-(`~/lab` is the working repo the RUNBOOK uses throughout; you fill in `lab.conf` right there.
-Forked this repo? Swap in your own clone URL above.)
+(`~/lab` is the working repo the RUNBOOK uses throughout; your answers live in `lab.conf` — which
+stays host-local and gitignored, so the repo itself remains generic. Forked this repo? Swap in
+your own clone URL above.)
 
 ## What's here
 
 ```
-lab.conf.example     # copy to lab.conf and fill in YOUR values (the only file you must edit)
+configure.sh         # interactively asks the values and writes lab.conf (no hand-editing)
+lab.conf.example     # the schema configure.sh fills in (or copy to lab.conf and edit by hand)
 bootstrap.sh         # one-shot host wiring from lab.conf (git hygiene, symlinks, systemd units)
 bin/
   lib.sh             # shared helpers; sources lab.conf, derives all paths
@@ -55,9 +59,10 @@ RUNBOOK.md           # the complete guide
    ```bash
    git clone https://github.com/GH_OWNER/server-scripts ~/lab && cd ~/lab
    ```
-3. **Configure** — the only file you must edit:
+3. **Configure** — interactively (asks the values, writes `lab.conf`):
    ```bash
-   cp lab.conf.example lab.conf && nano lab.conf
+   ./configure.sh                          # recommended — no hand-editing
+   # or by hand:  cp lab.conf.example lab.conf && nano lab.conf
    ```
 4. **Authenticate the externals** (interactive, per-host):
    ```bash

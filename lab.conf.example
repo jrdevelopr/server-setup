@@ -1,7 +1,7 @@
 # ─────────────────────────────────────────────────────────────────────────
 #  lab.conf — the ONE place you set deployment-specific values.
-#  Copy this file to `lab.conf` (same dir) and fill in your real values:
-#       cp lab.conf.example lab.conf && nano lab.conf
+#  Easiest: run `./configure.sh` — it prompts for these and writes lab.conf for you.
+#  By hand instead:  cp lab.conf.example lab.conf && nano lab.conf
 #  `lab.conf` is gitignored (it identifies your deployment); this .example is not.
 #  All scripts source it via bin/lib.sh. Paths derive from the repo location,
 #  so nothing is tied to a specific home directory.

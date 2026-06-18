@@ -79,7 +79,7 @@ data, but know what's coming):
 
 **4. The happy path** (each step links to its section — this is the order):
 1. Install prereqs: [Docker §4](#4-docker), [Caddy §5a](#5-caddy-the-reverse-proxy), `cloudflared`, `gh`, `jq`.
-2. `git clone GH_URL/GITHUB_REPO ~/lab && cd ~/lab && cp lab.conf.example lab.conf` → **fill it in now**.
+2. `git clone GH_URL/GITHUB_REPO ~/lab && cd ~/lab && ./configure.sh` — interactively asks the values + writes `lab.conf` (or `cp lab.conf.example lab.conf` and edit by hand).
 3. `gh auth login`; `cloudflared tunnel login`; `cloudflared tunnel create "$(. lab.conf; echo $TUNNEL)"` → paste the printed credentials path into `cloudflared/config.yml`.
 4. `./bootstrap.sh` — wires git hygiene, `/etc/LAB_NAME/`, the Caddy symlink, and the systemd units ([§16](#16-transferring-to-a-new-server)).
 5. **Stand up the front door:** deploy a **dashboard** (a startpage app on `DASHBOARD_PORT`, empty `subdomain` so it's the root) and the **login gateway** (a forward-auth app on `GATE_PORT` with `auth: false`); put their secrets in `/etc/LAB_NAME/`. See [§9](#9-the-login-gateway)–[§10](#10-the-dashboard).
@@ -851,8 +851,9 @@ The repo is portable; only host-specific values change. On the new box:
 4. **Fill in `lab.conf`** — the only file you edit. All host-specific values live here; the
    scripts read it and derive every path, so there's no scattered find-and-replace anymore:
    ```bash
-   cp lab.conf.example lab.conf && nano lab.conf
-   #   DOMAIN, LAN_IP, LAB_USER, LAB_NAME, TUNNEL, GITHUB_OWNER, ports
+   ./configure.sh                       # recommended: prompts for the values, writes lab.conf
+   # or by hand: cp lab.conf.example lab.conf && nano lab.conf
+   #   DOMAIN, LAN_IP, LAB_USER, LAB_NAME, TUNNEL, GITHUB_OWNER, TIMEZONE, git identity, ports
    ```
    (Two files still hold a couple of values `lab.conf` can't reach — `caddy/Caddyfile`'s
    `import` path and `cloudflared/config.yml`'s tunnel/UUID/hostnames. `bootstrap.sh` in step 6
