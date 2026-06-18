@@ -88,6 +88,8 @@ echo
 echo "✅ Wrote $CONF (chmod 600). Password shown masked below:"
 sed -E 's/^(LAB_PASSWORD=).*/\1"********"/; s/^/     /' "$CONF"
 echo
-echo "Next:"
-echo "  • Tell your agent:  \"Follow AGENTS.md / RUNBOOK.md to finish setting up this server.\""
-echo "  • Or continue by hand: ./bootstrap.sh   (then the RUNBOOK happy path: tunnel login, etc.)"
+echo "Next — config is done; the host still needs the install steps (in order):"
+echo "  • Easiest:  tell your agent  \"Follow AGENTS.md / RUNBOOK.md to set up this server.\""
+echo "  • By hand:  install prereqs (Docker, Caddy, cloudflared, gh) → tunnel login/create →"
+echo "              then ./bootstrap.sh   (it checks prereqs and wires the host)."
+echo "    Start at RUNBOOK.md ★ Pre-flight. (bootstrap.sh won't run until Caddy etc. are installed.)"

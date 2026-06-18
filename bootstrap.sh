@@ -20,6 +20,22 @@ for v in DOMAIN LAN_IP LAB_USER LAB_NAME TUNNEL GITHUB_OWNER; do
 	val="${!v:-}"
 	case "$val" in ""|example*|*'<'*) echo "✗ lab.conf: set a real value for $v (currently '$val')"; exit 1;; esac
 done
+
+# Prerequisites must be installed FIRST (RUNBOOK §3–6). This script wires the host; it does
+# NOT install Docker/Caddy/cloudflared/gh. Caddy in particular must exist — we symlink
+# /etc/caddy/Caddyfile and add the `caddy` group. So the correct order is:
+#   install prereqs  →  ./configure.sh  →  ./bootstrap.sh
+missing=""
+command -v git        >/dev/null 2>&1 || missing="$missing git"
+command -v caddy      >/dev/null 2>&1 || missing="$missing caddy"
+command -v cloudflared >/dev/null 2>&1 || missing="$missing cloudflared"
+if [ -n "$missing" ]; then
+	echo "✗ Install prerequisites first, then re-run ./bootstrap.sh — missing:$missing"
+	echo "  See RUNBOOK §3–6 (base prep, Docker, Caddy, Cloudflare Tunnel). Neither configure.sh"
+	echo "  nor bootstrap.sh installs them — that's a deliberate, sudo-touching step you control."
+	exit 1
+fi
+
 say() { printf '\033[0;34m==>\033[0m %s\n' "$*"; }
 ok()  { printf '\033[0;32m✓\033[0m %s\n' "$*"; }
 
