@@ -26,6 +26,11 @@ TUNNEL="myserver-tunnel"
 # GitHub account/org that holds the app repos + Project boards.
 GITHUB_OWNER="example-org"
 
+# Private per-server config-backup repo (under GITHUB_OWNER). bootstrap.sh detaches this
+# working copy from the PUBLIC template and points it here, so a server's config is NEVER
+# pushed to the public kit. Convention: <hostname>-setup-live. Empty = skip backup (still detaches).
+BACKUP_REPO="myserver-setup-live"
+
 # Host timezone (bootstrap.sh runs `timedatectl set-timezone`). Use a tz database name.
 TIMEZONE="America/New_York"
 

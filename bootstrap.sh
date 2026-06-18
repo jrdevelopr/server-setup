@@ -39,36 +39,36 @@ fi
 say() { printf '\033[0;34m==>\033[0m %s\n' "$*"; }
 ok()  { printf '\033[0;32m✓\033[0m %s\n' "$*"; }
 
-say "1/6  Host basics — timezone + git commit identity (from setup.conf)"
+say "1/7  Host basics — timezone + git commit identity (from setup.conf)"
 sudo timedatectl set-timezone "${TIMEZONE:-America/New_York}"
 [ -n "${GIT_USER_NAME:-}" ]  && git config --global user.name  "$GIT_USER_NAME"
 [ -n "${GIT_USER_EMAIL:-}" ] && git config --global user.email "$GIT_USER_EMAIL"
 ok "timezone=$(timedatectl show -p Timezone --value 2>/dev/null)  git=$(git config --global user.email 2>/dev/null)"
 
-say "2/6  Global git secret hygiene"
+say "2/7  Global git secret hygiene"
 git config --global core.excludesfile "$SETUP_DIR/git/gitignore.global"
 git config --global core.hooksPath    "$SETUP_DIR/git/hooks"
 chmod +x "$SETUP_DIR/git/hooks/pre-push" "$SETUP_DIR/bin/"*.sh
 ok "git excludesfile + hooksPath set"
 
-say "3/6  Secrets directory /etc/$SETUP_NAME (root, 700)"
+say "3/7  Secrets directory /etc/$SETUP_NAME (root, 700)"
 sudo mkdir -p "/etc/$SETUP_NAME"
 sudo chmod 700 "/etc/$SETUP_NAME"
 ok "/etc/$SETUP_NAME ready (put your *.env secrets here, never in git)"
 
-say "4/6  Personalize working-copy placeholders (YOUR_USER/YOUR_DOMAIN/TUNNEL)"
+say "4/7  Personalize working-copy placeholders (YOUR_USER/YOUR_DOMAIN/TUNNEL)"
 sed -i "s#/home/YOUR_USER/#/home/$SETUP_USER/#g" "$SETUP_DIR/caddy/Caddyfile" "$SETUP_DIR/cloudflared/config.yml"
 sed -i "s/YOUR_DOMAIN/$DOMAIN/g"               "$SETUP_DIR/cloudflared/config.yml"
 sed -i "s/^tunnel: TUNNEL/tunnel: $TUNNEL/"     "$SETUP_DIR/cloudflared/config.yml"
 ok "Caddyfile import path + cloudflared hostnames personalized"
 echo "    ! Still edit cloudflared/config.yml by hand: paste your <UUID>.json credentials path."
 
-say "5/6  Symlink Caddy config + grant caddy read access"
+say "5/7  Symlink Caddy config + grant caddy read access"
 sudo ln -sfn "$SETUP_DIR/caddy/Caddyfile" /etc/caddy/Caddyfile
 sudo usermod -aG "$SETUP_USER" caddy 2>/dev/null || true
 ok "/etc/caddy/Caddyfile -> $SETUP_DIR/caddy/Caddyfile"
 
-say "6/6  Install systemd units (cloudflared tunnel + dashboard status timer)"
+say "6/7  Install systemd units (cloudflared tunnel + dashboard status timer)"
 TMP=$(mktemp -d)
 sed -e "s/TUNNEL/$TUNNEL/g" -e "s#/home/YOUR_USER/#/home/$SETUP_USER/#g" -e "s/User=YOUR_USER/User=$SETUP_USER/" \
 	"$SETUP_DIR/systemd/cloudflared-tunnel.service" | sudo tee "/etc/systemd/system/cloudflared-$TUNNEL.service" >/dev/null
@@ -79,6 +79,29 @@ sudo systemctl daemon-reload
 sudo systemctl enable flame-status.timer >/dev/null 2>&1 || true
 rm -rf "$TMP"
 ok "Units installed: cloudflared-$TUNNEL.service, flame-status.{service,timer}"
+
+say "7/7  Config backup — detach from the PUBLIC template, point at your private repo"
+# A server's config (routes, tunnel config, contract) must NEVER push to the public kit.
+# This working copy was cloned from the public template, so drop that origin.
+if git -C "$SETUP_DIR" remote remove origin 2>/dev/null; then
+	ok "Detached origin (this server's config will not push to the public template)"
+fi
+if [ -n "${BACKUP_REPO:-}" ]; then
+	if command -v gh >/dev/null 2>&1 && gh auth status >/dev/null 2>&1; then
+		if gh repo view "$GITHUB_OWNER/$BACKUP_REPO" >/dev/null 2>&1; then
+			git -C "$SETUP_DIR" remote add origin "https://github.com/$GITHUB_OWNER/$BACKUP_REPO.git"
+			git -C "$SETUP_DIR" push -u origin HEAD:main >/dev/null 2>&1 || true
+		else
+			( cd "$SETUP_DIR" && gh repo create "$GITHUB_OWNER/$BACKUP_REPO" --private --source=. --remote=origin --push >/dev/null 2>&1 )
+		fi
+		ok "Config backs up to PRIVATE $GITHUB_OWNER/$BACKUP_REPO"
+	else
+		warn "gh not authenticated — after 'gh auth login', run:"
+		echo "      gh repo create $GITHUB_OWNER/$BACKUP_REPO --private --source=$SETUP_DIR --remote=origin --push"
+	fi
+else
+	warn "BACKUP_REPO empty — no off-site config backup (origin detached for safety)."
+fi
 
 cat <<EOF
 

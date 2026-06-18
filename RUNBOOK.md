@@ -869,10 +869,13 @@ The repo is portable; only host-specific values change. On the new box:
    - **Regenerate all secrets** in `/etc/SETUP_NAME/` — do **not** copy old ones. New gate
      `GATE_SECRET_KEY` + password hash, new app credentials, etc.
 6. **Run `./bootstrap.sh`** — wires the host from `setup.conf` in one shot (idempotent):
-   global gitignore + hooks path, creates `/etc/SETUP_NAME/`, personalizes the `caddy/Caddyfile`
-   import path + `cloudflared/config.yml` hostnames, symlinks `/etc/caddy/Caddyfile`, and
-   installs the `cloudflared-<TUNNEL>` + `flame-status` systemd units. (Then paste the tunnel
-   `<UUID>` path into `cloudflared/config.yml` and `enable --now cloudflared-<TUNNEL>`.)
+   timezone + git identity, global gitignore + hooks path, creates `/etc/SETUP_NAME/`, personalizes
+   the `caddy/Caddyfile` import path + `cloudflared/config.yml` hostnames, symlinks
+   `/etc/caddy/Caddyfile`, installs the `cloudflared-<TUNNEL>` + `flame-status` systemd units, and
+   **detaches this copy from the PUBLIC template — re-pointing `origin` at a private per-server
+   backup repo `BACKUP_REPO` (`<host>-setup-live`), created automatically via `gh`.** This is what
+   keeps a server's config (routes, tunnel config, contract) from ever pushing to the public kit.
+   (Then paste the tunnel `<UUID>` path into `cloudflared/config.yml` and `enable --now cloudflared-<TUNNEL>`.)
 7. **Bring up the front door, then the apps:** deploy the dashboard, deploy the login gateway,
    then `deploy.sh <app>` for each app (or re-clone each app repo into `~/apps/` and deploy).
 8. **DNS:** `cloudflared tunnel route dns TUNNEL <host>` per app (or the one-time wildcard CNAME).

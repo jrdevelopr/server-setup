@@ -43,6 +43,10 @@ bin/board.sh   {start|done|status|additem} <repo> <issue#>   # move Project boar
   (root, `chmod 600`).
 - **Keep this repo anonymous:** placeholders only — no real domains, IPs, users, emails, or
   tunnel IDs anywhere in tracked files.
+- **NEVER push a server's config to the PUBLIC template.** The operational copy's `origin` must
+  point at this server's **private** `BACKUP_REPO` (`<host>-setup-live`), which `bootstrap.sh`
+  sets up. Before committing/pushing config, confirm `git remote -v` is the private repo — if it
+  still shows `…/server-setup` (the public kit), stop and re-point it.
 
 ## Auth convention — every app sits behind the login
 - **Every public app is gated by the Caddy forward-auth login** (one branded splash page covers
