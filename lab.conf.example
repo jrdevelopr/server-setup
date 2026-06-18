@@ -13,7 +13,7 @@ DOMAIN="example.site"
 # The server's LAN/VPN IP (how YOU reach apps directly, bypassing the tunnel/gate).
 LAN_IP="<server-lan-ip>"
 
-# The OS login user that owns ~/lab and ~/apps (used for native systemd units).
+# The OS login user that owns ~/server-setup and ~/apps (used for native systemd units).
 LAB_USER="examplelab"
 
 # Short name for this lab → the secrets directory /etc/LAB_NAME (root, chmod 600).

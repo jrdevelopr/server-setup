@@ -1,4 +1,4 @@
-# server-scripts
+# server-setup
 
 A reusable template for a **self-hosting app lab**: one Linux host that runs **both Docker and
 native apps** behind **one Caddy reverse proxy** and **one Cloudflare Tunnel**, with a **single
@@ -14,21 +14,21 @@ No secrets, no domains, no IPs are baked in — every deployment-specific value 
 
 ## 🚀 Paste this on a fresh Ubuntu server
 
-Run this one block (as a sudo user). It pulls the whole setup kit into **`~/lab`**:
+Run this one block (as a sudo user). It pulls the whole setup kit into **`~/server-setup`**:
 
 ```bash
 command -v git >/dev/null || { sudo apt-get update -qq && sudo apt-get install -y git; }
-git clone https://github.com/jrdevelopr/server-scripts.git ~/lab && cd ~/lab && ./configure.sh
+git clone https://github.com/jrdevelopr/server-setup.git ~/server-setup && cd ~/server-setup && ./configure.sh
 ```
 
-That clones the kit into **`~/lab`** and runs **`configure.sh`**, which **interactively asks you
+That clones the kit into **`~/server-setup`** and runs **`configure.sh`**, which **interactively asks you
 the handful of values** (domain, GitHub owner, IP, lab name, tunnel, timezone, git identity —
 with auto-detected defaults you just press Enter through) and writes them to `lab.conf`. No
 hand-editing a config file.
 
-Then just tell an agent: **“Go to `~/lab` and follow AGENTS.md to set up this server.”**
+Then just tell an agent: **“Go to `~/server-setup` and follow AGENTS.md to set up this server.”**
 The agent reads [`AGENTS.md`](AGENTS.md) → [`RUNBOOK.md`](RUNBOOK.md) and takes it from there.
-(`~/lab` is the working repo the RUNBOOK uses throughout; your answers live in `lab.conf` — which
+(`~/server-setup` is the working repo the RUNBOOK uses throughout; your answers live in `lab.conf` — which
 stays host-local and gitignored, so the repo itself remains generic. Forked this repo? Swap in
 your own clone URL above.)
 
@@ -55,9 +55,9 @@ RUNBOOK.md           # the complete guide
 
 1. **Prereqs** (install once — see RUNBOOK §3–6): Docker + compose, Caddy, `cloudflared`, `gh`,
    `git`, `jq`. Plus a domain on Cloudflare and a GitHub account.
-2. **Clone** to `~/lab` on the server:
+2. **Clone** to `~/server-setup` on the server:
    ```bash
-   git clone https://github.com/GH_OWNER/server-scripts ~/lab && cd ~/lab
+   git clone https://github.com/GH_OWNER/server-setup ~/server-setup && cd ~/server-setup
    ```
 3. **Configure** — interactively (asks the values, writes `lab.conf`):
    ```bash
@@ -94,7 +94,7 @@ RUNBOOK.md           # the complete guide
 |---|---|
 | `DOMAIN` | Your Cloudflare domain |
 | `LAN_IP` | Server LAN/VPN IP (the direct, ungated path) |
-| `LAB_USER` | OS user that owns `~/lab` + `~/apps` |
+| `LAB_USER` | OS user that owns `~/server-setup` + `~/apps` |
 | `LAB_NAME` | Secrets dir name → `/etc/LAB_NAME/` |
 | `TUNNEL` | Cloudflare tunnel name |
 | `GITHUB_OWNER` | GitHub account/org for app repos |

@@ -19,7 +19,7 @@ deliberately app-agnostic — it documents the platform, not the specific apps t
 > does what it does; the code is the source of truth.
 >
 > ```bash
-> git clone GH_URL/GITHUB_REPO ~/lab && cd ~/lab    # get the working code, then follow §Pre-flight
+> git clone GH_URL/GITHUB_REPO ~/server-setup && cd ~/server-setup    # get the working code, then follow §Pre-flight
 > ```
 
 > **Conventions used below.** Replace these placeholders with your own values:
@@ -32,7 +32,7 @@ deliberately app-agnostic — it documents the platform, not the specific apps t
 > | `TUNNEL` | `examplelab-tunnel` | The Cloudflare tunnel name |
 > | `GH_OWNER` | `example-org` | GitHub account/org that holds the repos |
 > | `GH_URL` | `https://github.com/example-org` | URL of the GitHub account/org (= `https://github.com/GH_OWNER`) |
-> | `GITHUB_REPO` | `examplelab` | The infrastructure repo (this `~/lab` dir) under `GH_OWNER`; cloned onto each new server. App repos are separate: `GH_OWNER/<app>` |
+> | `GITHUB_REPO` | `examplelab` | The infrastructure repo (this `~/server-setup` dir) under `GH_OWNER`; cloned onto each new server. App repos are separate: `GH_OWNER/<app>` |
 >
 > Everything below is generic — find-and-replace these placeholders with your real values.
 
@@ -49,7 +49,7 @@ stopping mid-install to hunt for a value or an account.
 |---|---|
 | `DOMAIN` | A domain already added to Cloudflare, nameservers pointed there (zone **active**). |
 | `LAN_IP` | The server's LAN/VPN address — `ip -4 addr show` on the box. |
-| `LAB_USER` | The non-root sudo user that will own `~/lab` + `~/apps` (often the user you SSH in as). |
+| `LAB_USER` | The non-root sudo user that will own `~/server-setup` + `~/apps` (often the user you SSH in as). |
 | `LAB_NAME` | Free choice — becomes the secrets dir `/etc/LAB_NAME/` (e.g. `devlab`). |
 | `TUNNEL` | Free choice — the Cloudflare tunnel's name. |
 | `GITHUB_OWNER` | Your GitHub account or org. |
@@ -79,7 +79,7 @@ data, but know what's coming):
 
 **4. The happy path** (each step links to its section — this is the order):
 1. Install prereqs: [Docker §4](#4-docker), [Caddy §5a](#5-caddy-the-reverse-proxy), `cloudflared`, `gh`, `jq`.
-2. `git clone GH_URL/GITHUB_REPO ~/lab && cd ~/lab && ./configure.sh` — interactively asks the values + writes `lab.conf` (or `cp lab.conf.example lab.conf` and edit by hand).
+2. `git clone GH_URL/GITHUB_REPO ~/server-setup && cd ~/server-setup && ./configure.sh` — interactively asks the values + writes `lab.conf` (or `cp lab.conf.example lab.conf` and edit by hand).
 3. `gh auth login`; `cloudflared tunnel login`; `cloudflared tunnel create "$(. lab.conf; echo $TUNNEL)"` → paste the printed credentials path into `cloudflared/config.yml`.
 4. `./bootstrap.sh` — wires git hygiene, `/etc/LAB_NAME/`, the Caddy symlink, and the systemd units ([§16](#16-transferring-to-a-new-server)).
 5. **Stand up the front door:** deploy a **dashboard** (a startpage app on `DASHBOARD_PORT`, empty `subdomain` so it's the root) and the **login gateway** (a forward-auth app on `GATE_PORT` with `auth: false`); put their secrets in `/etc/LAB_NAME/`. See [§9](#9-the-login-gateway)–[§10](#10-the-dashboard).
@@ -296,7 +296,7 @@ sudo ln -s /home/YOUR_USER/lab/caddy/Caddyfile /etc/caddy/Caddyfile
 
 ### 5c. The Caddyfile
 
-`~/lab/caddy/Caddyfile`:
+`~/server-setup/caddy/Caddyfile`:
 
 ```caddyfile
 {
@@ -344,7 +344,7 @@ http://<sub>.YOUR_DOMAIN {
 Validate and reload (never full-restart in normal operation):
 
 ```bash
-caddy validate --config ~/lab/caddy/Caddyfile
+caddy validate --config ~/server-setup/caddy/Caddyfile
 sudo systemctl reload caddy
 sudo systemctl enable caddy
 ```
@@ -372,7 +372,7 @@ cloudflared tunnel create TUNNEL  # writes ~/.cloudflared/<UUID>.json (the tunne
 
 ### 6b. Ingress config
 
-`~/lab/cloudflared/config.yml`:
+`~/server-setup/cloudflared/config.yml`:
 
 ```yaml
 tunnel: TUNNEL
@@ -452,7 +452,7 @@ cloudflared tunnel route dns TUNNEL ssh.YOUR_DOMAIN
 
 # 3. Restart the tunnel so it loads the new ingress, then validate
 sudo systemctl restart cloudflared-TUNNEL
-cloudflared tunnel --config ~/lab/cloudflared/config.yml ingress validate
+cloudflared tunnel --config ~/server-setup/cloudflared/config.yml ingress validate
 ```
 
 **On each client machine** (laptop/phone) — install `cloudflared`, then add to `~/.ssh/config`:
@@ -485,7 +485,7 @@ the network path). Phone: Termux (`pkg install openssh cloudflared` + same confi
 ## 7. Repo layout
 
 ```
-~/lab/                         # the infrastructure repo (push to GH_OWNER/GITHUB_REPO)
+~/server-setup/                         # the infrastructure repo (push to GH_OWNER/GITHUB_REPO)
   lab.conf                     # ← THE one file you fill in (copy of lab.conf.example; gitignored)
   lab.conf.example             # template of the above (the only file you must edit)
   bootstrap.sh                 # one-shot host wiring from lab.conf
@@ -520,9 +520,9 @@ the network path). Phone: Termux (`pkg install openssh cloudflared` + same confi
 Create and version it:
 
 ```bash
-mkdir -p ~/lab/{bin,caddy/apps.d,cloudflared,git/hooks} ~/apps /etc/LAB_NAME
+mkdir -p ~/server-setup/{bin,caddy/apps.d,cloudflared,git/hooks} ~/apps /etc/LAB_NAME
 sudo chmod 700 /etc/LAB_NAME
-cd ~/lab && git init -b main
+cd ~/server-setup && git init -b main
 # ... add files ...
 gh repo create GH_OWNER/GITHUB_REPO --private --source=. --remote=origin --push
 ```
@@ -533,20 +533,20 @@ gh repo create GH_OWNER/GITHUB_REPO --private --source=. --remote=origin --push
 
 Two layers, both global (apply to **every** repo on the host):
 
-**8a. Global gitignore** (`~/lab/git/gitignore.global`): ignores `.env`, `*.pem`, `*.key`,
+**8a. Global gitignore** (`~/server-setup/git/gitignore.global`): ignores `.env`, `*.pem`, `*.key`,
 `*credentials*.json`, token files, plus `node_modules/`, build dirs, OS cruft. Wire it up:
 
 ```bash
 git config --global core.excludesfile /home/YOUR_USER/lab/git/gitignore.global
 ```
 
-**8b. Global pre-push hook** (`~/lab/git/hooks/pre-push`): on every push, diffs the outgoing
+**8b. Global pre-push hook** (`~/server-setup/git/hooks/pre-push`): on every push, diffs the outgoing
 commits and **aborts** if it finds high-signal secret patterns (GitHub `ghp_…`, AWS `AKIA…`,
 Slack `xox…`, OpenAI `sk-…`, Google `AIza…`, `BEGIN … PRIVATE KEY`) or forbidden filenames
 (`.env`, `*.pem`, `credentials*.json`). Wire it up:
 
 ```bash
-chmod +x ~/lab/git/hooks/pre-push
+chmod +x ~/server-setup/git/hooks/pre-push
 git config --global core.hooksPath /home/YOUR_USER/lab/git/hooks
 ```
 
@@ -620,7 +620,7 @@ The status timer:
 
 ## 11. The automation scripts
 
-Four bash scripts under `~/lab/bin/` turn "a folder" into "a deployed, routed, logged-in,
+Four bash scripts under `~/server-setup/bin/` turn "a folder" into "a deployed, routed, logged-in,
 dashboarded app." All are idempotent.
 
 ### `lab.conf` — the single source of deployment-specific values
@@ -851,7 +851,7 @@ The repo is portable; only host-specific values change. On the new box:
 
 1. **Provision** (§3): user, packages, timezone.
 2. **Install** Docker (§4), Caddy (§5a), cloudflared, gh.
-3. **Clone the infra repo:** `git clone GH_URL/GITHUB_REPO ~/lab && cd ~/lab`.
+3. **Clone the infra repo:** `git clone GH_URL/GITHUB_REPO ~/server-setup && cd ~/server-setup`.
 4. **Fill in `lab.conf`** — the only file you edit. All host-specific values live here; the
    scripts read it and derive every path, so there's no scattered find-and-replace anymore:
    ```bash

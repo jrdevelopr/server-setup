@@ -4,7 +4,7 @@
 # be pushed for high-signal secret patterns and forbidden filenames, and
 # aborts the push if any are found.
 #
-# Installed globally via: git config --global core.hooksPath ~/lab/git/hooks
+# Installed globally via: git config --global core.hooksPath ~/server-setup/git/hooks
 set -euo pipefail
 
 remote="$1"

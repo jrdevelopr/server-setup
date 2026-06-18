@@ -1,4 +1,4 @@
-# AGENTS.md — server-scripts
+# AGENTS.md — server-setup
 
 > Single source of agent/contributor instructions, in the open [AGENTS.md](https://agents.md)
 > format (Codex, Cursor, Copilot, Claude Code, Aider … all read this; `CLAUDE.md` is just a

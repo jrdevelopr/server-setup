@@ -44,7 +44,7 @@ echo
 echo "── Configure this lab (writes lab.conf) ───────────────────────────────"
 ask DOMAIN        "Domain (must already be on Cloudflare)"        "${DOMAIN:-}"
 ask GITHUB_OWNER  "GitHub account/org for app repos"              "${GITHUB_OWNER:-}"
-ask LAB_USER      "OS login user that owns ~/lab and ~/apps"      "${LAB_USER:-$USER}"
+ask LAB_USER      "OS login user that owns ~/server-setup and ~/apps"      "${LAB_USER:-$USER}"
 ask LAN_IP        "Server LAN/VPN IP (reach apps directly)"       "${LAN_IP:-$det_ip}"
 ask LAB_NAME      "Lab name (secrets dir -> /etc/<name>)"         "${LAB_NAME:-$LAB_USER}"
 ask TUNNEL        "Cloudflare tunnel name"                        "${TUNNEL:-${LAB_NAME}-tunnel}"

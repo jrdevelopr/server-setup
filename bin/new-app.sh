@@ -90,7 +90,7 @@ Lab app scaffolded by \`new-app.sh\`.
 
 ## Run / redeploy
 \`\`\`
-~/lab/bin/deploy.sh $NAME
+~/server-setup/bin/deploy.sh $NAME
 \`\`\`
 Idempotent: app name = compose project / systemd unit name, so re-runs update in place.
 
@@ -159,4 +159,4 @@ echo -e "   Local (after deploy): ${G}http://$LAN_IP:$PORT${NC}"
 echo -e "   Public (after deploy): ${G}https://$SUB.$DOMAIN${NC}"
 echo -e "   Board:  https://github.com/users/$GITHUB_OWNER/projects/${PROJ_NUM:-?}"
 echo -e "   Work issues in order: ${B}board.sh start $NAME <#>${NC} … ${B}board.sh done $NAME <#>${NC}"
-echo -e "   Next step: ${B}~/lab/bin/deploy.sh $NAME${NC}"
+echo -e "   Next step: ${B}~/server-setup/bin/deploy.sh $NAME${NC}"
