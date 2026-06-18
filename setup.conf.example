@@ -45,6 +45,8 @@ ADMIN_EMAIL="you@example.com"    # email identity for apps that key on email
 SETUP_PASSWORD=""                  # the ONE production password, used everywhere — SET THIS before
                                  # running. Host-local SECRET: setup.conf is gitignored; keep it
                                  # chmod 600 and NEVER commit it.
+                                 # To CHANGE it later: edit this line, then run
+                                 # `bin/rotate-password.sh` to push it to the OS login + all apps.
 
 # Host-port range auto-assigned to apps (one per app).
 PORT_MIN=8080

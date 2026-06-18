@@ -18,6 +18,7 @@ ports; TLS at the Cloudflare edge. Full guide: **[RUNBOOK.md](RUNBOOK.md)** (sta
 bin/new-app.sh <name> [docker|native] ["Issue 1" ...]   # scaffold app + GitHub repo + Project board
 bin/deploy.sh  <name>                # deploy -> verify local -> route -> DNS -> dashboard tile
 bin/board.sh   {start|done|status|additem} <repo> <issue#>   # move Project board cards
+bin/rotate-password.sh               # after editing SETUP_PASSWORD in setup.conf: push it to OS login + every app
 ```
 
 ## How to operate (you have broad autonomy)
@@ -55,6 +56,11 @@ bin/board.sh   {start|done|status|additem} <repo> <issue#>   # move Project boar
 - **One shared production password for everything** (the splash login *and* each app's own
   login): **`SETUP_PASSWORD`** from `setup.conf`. The human sets it before you start — never invent
   or print it; read it from config and seed each app with it.
+- **Rotating it is self-service:** the human edits `SETUP_PASSWORD` in `setup.conf` and runs
+  **`bin/rotate-password.sh`** — it re-applies the value to the OS login, `caddy-auth.txt`, the
+  login gate (bcrypt+base64), and every app that pulls a `PASSWORD=`/gate env file (recreating
+  it). Apps that keep their login in their own DB (`ADMIN_PASSWORD=`) are listed for a one-time
+  in-UI change — each still sits behind the gate, so rotating the gate already re-secures access.
 - **Username is always `admin`** — or an **email** where an app requires one, using
   **`ADMIN_EMAIL`** from `setup.conf` (`ADMIN_USER` holds the default).
 - Apps with **no native auth** are still safe behind the gate. Apps that can run a **host shell**
