@@ -52,7 +52,13 @@ for dir in "$APPS_DIR"/*/; do
 	for envf in "${envs[@]}"; do
 		sudo test -f "$envf" || continue
 		if sudo grep -qE '^GATE_PASSWORD_HASH_B64=' "$envf"; then
-			HASH_B64=$(caddy hash-password --plaintext "$PW" | base64 -w0)
+			# NB: strip the newline `caddy hash-password` appends — base64-ing it yields a
+			# 61-byte hash (bcrypt is 60) that the gate rejects.
+			HASH_B64=$(caddy hash-password --plaintext "$PW" | tr -d '\n' | base64 -w0)
+			# Guard: bcrypt is exactly 60 bytes; anything else is corrupt and would lock
+			# everyone out of the gate. Abort before writing rather than ship a bad hash.
+			declen=$(printf '%s' "$HASH_B64" | base64 -d 2>/dev/null | wc -c)
+			[ "$declen" -eq 60 ] || die "gate hash is $declen bytes (expected 60) — aborting, $envf left untouched."
 			sudo sed -i "s|^GATE_USER=.*|GATE_USER=$USER_NAME|; s|^GATE_PASSWORD_HASH_B64=.*|GATE_PASSWORD_HASH_B64=$HASH_B64|" "$envf"
 			recreate "$app" && ok "$app (login gate — every app's front door)" || warn "$app recreate failed"
 		elif sudo grep -qE '^PASSWORD=' "$envf"; then
