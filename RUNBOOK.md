@@ -913,6 +913,13 @@ credentials, the GitHub auth token, and **every secret in `/etc/SETUP_NAME/`**.
   limiting what the server can reach on your other subnets; Cloudflare Access (real edge SSO /
   device posture) instead of the simple gate; per-app credentials instead of one shared password;
   moving the highest-risk tools to isolated VMs.
+- **Cheap, no-pain hardening wins** (safe on any box — apply early):
+  - `sudo apt-get install -y unattended-upgrades` + `/etc/apt/apt.conf.d/20auto-upgrades` with
+    `Update-Package-Lists "1"; Unattended-Upgrade "1";` → automatic security patches.
+  - **Disable root SSH** when you log in as a sudo user: drop-in
+    `/etc/ssh/sshd_config.d/90-hardening.conf` → `PermitRootLogin no`, then `sshd -t && systemctl
+    reload ssh`. (Keep `PasswordAuthentication` until key-only is verified — don't lock yourself out.)
+  - Always `sshd -t` BEFORE reloading, and **reload** (not restart) so live sessions survive a typo.
 
 ---
 
