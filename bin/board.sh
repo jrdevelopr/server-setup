@@ -52,10 +52,42 @@ status_field_id() {
 	query($pid:ID!){ node(id:$pid){ ... on ProjectV2 { field(name:"Status"){ ... on ProjectV2SingleSelectField { id } } } } }' \
 		-f pid="$1" --jq '.data.node.field.id'
 }
+# Find a Status option id by name, TOLERANTLY.
+#
+# An exact match breaks on projects that use a different naming scheme for the
+# same four columns. webmail-for-wordpress follows shrocktech/project-blueprint,
+# whose columns are BACKLOG / TO DO / IN PROGRESS / COMPLETED; `board.sh start`
+# asked for "In Progress", found nothing, and died. So:
+#
+#   - compare case- and space-insensitively  ("IN PROGRESS" == "In Progress")
+#   - treat Done and COMPLETED as the same column
+#
+# This only ever widens what matches, so every project that worked before still
+# works exactly as it did.
 status_option_id() {
-	gh api graphql -f query='
+	local opts want alt name id norm
+	opts=$(gh api graphql -f query='
 	query($pid:ID!){ node(id:$pid){ ... on ProjectV2 { field(name:"Status"){ ... on ProjectV2SingleSelectField { options{ id name } } } } } }' \
-		-f pid="$1" --jq ".data.node.field.options[] | select(.name==\"$2\") | .id" | head -1
+		-f pid="$1" --jq '.data.node.field.options[] | "\(.name)\t\(.id)"')
+
+	norm() { printf '%s' "$1" | tr '[:upper:]' '[:lower:]' | tr -d ' _-'; }
+	want=$(norm "$2")
+	case "$want" in
+		done)      alt=completed ;;
+		completed) alt=done ;;
+		*)         alt="" ;;
+	esac
+
+	while IFS=$'\t' read -r name id; do
+		[ -n "$name" ] || continue
+		[ "$(norm "$name")" = "$want" ] && { printf '%s' "$id"; return; }
+	done <<< "$opts"
+
+	[ -n "$alt" ] || return
+	while IFS=$'\t' read -r name id; do
+		[ -n "$name" ] || continue
+		[ "$(norm "$name")" = "$alt" ] && { printf '%s' "$id"; return; }
+	done <<< "$opts"
 }
 
 set_status() {
