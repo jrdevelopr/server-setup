@@ -47,7 +47,7 @@ bin/
 caddy/Caddyfile      # reverse proxy (auto_https off, (gate) forward-auth, :80 root, import apps.d/*)
 cloudflared/config.yml   # tunnel ingress (apex + wildcard -> localhost:80)
 systemd/             # unit templates: cloudflared tunnel + dashboard status timer
-git/                 # global gitignore + pre-push secret-scanning hook
+git/                 # global gitignore + pre-commit (Betterleaks) and pre-push secret guards
 RUNBOOK.md           # the complete guide
 ```
 

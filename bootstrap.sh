@@ -48,8 +48,26 @@ ok "timezone=$(timedatectl show -p Timezone --value 2>/dev/null)  git=$(git conf
 say "2/7  Global git secret hygiene"
 git config --global core.excludesfile "$SETUP_DIR/git/gitignore.global"
 git config --global core.hooksPath    "$SETUP_DIR/git/hooks"
-chmod +x "$SETUP_DIR/git/hooks/pre-push" "$SETUP_DIR/bin/"*.sh
-ok "git excludesfile + hooksPath set"
+chmod +x "$SETUP_DIR/git/hooks/pre-push" "$SETUP_DIR/git/hooks/pre-commit" "$SETUP_DIR/bin/"*.sh
+# Betterleaks scans staged changes in the pre-commit hook. Install a pinned release,
+# verified against its published checksums, into ~/.local/bin if it is missing.
+BETTERLEAKS_VERSION="${BETTERLEAKS_VERSION:-1.10.0}"
+if ! command -v betterleaks >/dev/null 2>&1 && [ ! -x "$HOME/.local/bin/betterleaks" ]; then
+	case "$(uname -m)" in x86_64) bl_arch=x64;; aarch64|arm64) bl_arch=arm64;; *) bl_arch="";; esac
+	if [ -n "$bl_arch" ]; then
+		bl_tmp="$(mktemp -d)"; bl_tar="betterleaks_${BETTERLEAKS_VERSION}_linux_${bl_arch}.tar.gz"
+		bl_url="https://github.com/betterleaks/betterleaks/releases/download/v${BETTERLEAKS_VERSION}"
+		curl -fsSL -o "$bl_tmp/$bl_tar" "$bl_url/$bl_tar" && curl -fsSL -o "$bl_tmp/checksums.txt" "$bl_url/checksums.txt"
+		( cd "$bl_tmp" && grep " $bl_tar\$" checksums.txt | sha256sum -c - >/dev/null ) \
+			&& tar -xzf "$bl_tmp/$bl_tar" -C "$bl_tmp" betterleaks \
+			&& mkdir -p "$HOME/.local/bin" && install -m 755 "$bl_tmp/betterleaks" "$HOME/.local/bin/betterleaks" \
+			|| { echo "✗ Betterleaks download or checksum failed; commits stay blocked until it is installed."; }
+		rm -rf "$bl_tmp"
+	else
+		echo "✗ No Betterleaks build for $(uname -m); install it by hand or commits stay blocked."
+	fi
+fi
+ok "git excludesfile + hooksPath set; betterleaks $("$HOME/.local/bin/betterleaks" version 2>/dev/null || betterleaks version 2>/dev/null || echo 'MISSING')"
 
 say "3/7  Secrets directory /etc/$SETUP_NAME (root, 700)"
 sudo mkdir -p "/etc/$SETUP_NAME"

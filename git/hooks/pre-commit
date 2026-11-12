@@ -1,0 +1,25 @@
+#!/usr/bin/env bash
+# ── Pre-commit secret scan (global hook) ─────────────────────────────
+# Scans the staged changes with Betterleaks before every commit made on this
+# host (global core.hooksPath). Uses the repository's .betterleaks.toml when it
+# exists, otherwise Betterleaks' default rules. Findings are redacted; live
+# credential validation stays off. A reviewed false positive gets a narrow
+# allowlist entry in that repository's .betterleaks.toml, never --no-verify.
+# Works alongside pre-push (token-pattern guard on the pushed range).
+set -euo pipefail
+
+if ! command -v betterleaks >/dev/null 2>&1; then
+	printf '\033[0;31m✗ pre-commit: betterleaks is not installed, so staged changes cannot be scanned.\033[0m\n' >&2
+	printf '  Install a verified release (https://github.com/betterleaks/betterleaks/releases) into ~/.local/bin.\n' >&2
+	exit 1
+fi
+
+top=$(git rev-parse --show-toplevel)
+args=(git --pre-commit --staged --redact --no-banner --log-level warn)
+[ -f "$top/.betterleaks.toml" ] && args+=(--config "$top/.betterleaks.toml")
+
+if ! betterleaks "${args[@]}" "$top"; then
+	printf '\033[0;31m✗ Commit blocked: Betterleaks found a possible secret in the staged changes (shown redacted above).\033[0m\n' >&2
+	printf '  Remove it from the staged files. If it is a confirmed false positive, add a narrow allowlist to .betterleaks.toml.\n' >&2
+	exit 1
+fi

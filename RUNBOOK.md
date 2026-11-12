@@ -558,6 +558,15 @@ chmod +x ~/server-setup/git/hooks/pre-push
 git config --global core.hooksPath /home/YOUR_USER/server-setup/git/hooks
 ```
 
+**8c. Global pre-commit hook** (`~/server-setup/git/hooks/pre-commit`): before every commit it scans the
+staged changes with [Betterleaks](https://github.com/betterleaks/betterleaks) (redacted output, no live
+credential validation), using the repository's `.betterleaks.toml` when one exists. It **blocks** the
+commit on a finding, and also when Betterleaks is not installed. `bootstrap.sh` installs a pinned
+release (`BETTERLEAKS_VERSION`, default 1.10.0) into `~/.local/bin` after checking it against the
+published `checksums.txt`. A confirmed false positive gets a narrow allowlist in that repo's
+`.betterleaks.toml`; never commit with `--no-verify`. Full history scan of a repo:
+`betterleaks git . --redact`.
+
 **The discipline:** *no secret ever lives under `~/apps/`.* All credentials go in
 `/etc/SETUP_NAME/<app>.env` (root, `chmod 600`) and are referenced by compose `env_file:` or by the
 app's systemd unit. The git layers are a safety net, not the primary control.
@@ -936,6 +945,7 @@ credentials, the GitHub auth token, and **every secret in `/etc/SETUP_NAME/`**.
 | `bin/board.sh` | GitHub Projects v2 card mover (GraphQL) |
 | `bin/flame-status.sh` | Dashboard status-dot updater (systemd timer) |
 | `git/gitignore.global` | Global secret excludes (`core.excludesfile`) |
+| `git/hooks/pre-commit` | Betterleaks staged-change secret scan (`core.hooksPath`) |
 | `git/hooks/pre-push` | Secret-scanning push guard (`core.hooksPath`) |
 | `/etc/SETUP_NAME/<app>.env` | Per-app secrets (root 600, **never** in git) |
 | `~/apps/<name>/deploy.yaml` | Per-app deploy descriptor |
